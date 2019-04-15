@@ -1,22 +1,21 @@
 import tweepy
 import matplotlib.pyplot as plt
 import numpy as np
+import re
+from urllib.request import urlopen
+import urllib.error
 
-with open('keys') as k:
-    consumer_key = k.readline()
-    consumer_secret = k.readline()
-    token = k.readline()
-    token_secret = k.readline()
-
-    auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-    auth.set_access_token(token,token_secret) 
+auth = tweepy.OAuthHandler("", "")
+auth.set_access_token("","") 
 
 api = tweepy.API(auth)
 
-
-def get_tweets_by_id(username):
+def get_tweet_ids(username):
     tweets = api.user_timeline(screen_name=username)
     return map(lambda t: t.id ,tweets)
+
+def get_user_id(username):
+    return api.get_user(screen_name=username).id
 
 def create_bar_chart(users,likes,username):
     y_pos = np.arange(len(users))
@@ -26,5 +25,11 @@ def create_bar_chart(users,likes,username):
     plt.title('@' + username + "'s most favourited tweets")
     plt.show()
      
-def get_userids__of_tweet_likes(id):
-    return 0
+def get_favourite_list(id,user_id):
+    try:
+        json_data = urlopen('https://twitter.com/i/activity/favorited_popup?id=' + str(id)).read().decode('utf-8')
+        found_ids = re.findall(r'data-user-id=\\"+\d+', json_data)
+        unique_ids = list(set([re.findall(r'\d+', match)[0] for match in found_ids]))
+        return filter(lambda i: i!=str(user_id),unique_ids)
+    except urllib.error.HTTPError:
+        return False
